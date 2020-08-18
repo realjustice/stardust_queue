@@ -9,16 +9,13 @@ import (
 )
 
 type RedisQueue struct {
-	c           redis.Conn
-	defaultName string // The Queue defaultName
-	retryAfter  int    // Unit:seconds
+	c          redis.Conn
+	retryAfter int // Unit:seconds
 }
 
-func NewRedisQueue(con redis.Conn, retryAfter int, defaultName ...string) *RedisQueue {
+func NewRedisQueue(con redis.Conn, retryAfter int) *RedisQueue {
 	queue := &RedisQueue{c: con}
-	if len(defaultName) == 0 {
-		queue.defaultName = "default"
-	}
+	queue.retryAfter = retryAfter
 
 	return queue
 }
@@ -77,7 +74,8 @@ func (this *RedisQueue) Pop(queue ...string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	reserved, _ := this.retrieveNextJob(prefixed)
+	reserved, err := this.retrieveNextJob(prefixed)
+
 	// if the next job is not nil,will get [unmodified job,reserved job]
 	data := reserved.([]interface{})
 	if data[1] != nil {
@@ -114,6 +112,12 @@ func (this *RedisQueue) retrieveNextJob(queue string) (interface{}, error) {
 	//把默认队列中的任务 lpop 出来
 	//将他的 attempts 次数 + 1
 	//zadd 存入 {queue}:reserved 队列，score 为 now+retry_after
-	reserved, err := scripts.Scripts["pop"].Do(this.c, queue, queue+":reserved", time.Now().Add(60*time.Second).Unix())
+	reserved, err := scripts.Scripts["pop"].Do(this.c, queue, queue+":reserved", time.Now().Add(time.Duration(this.retryAfter)*time.Second).Unix())
 	return reserved, err
+}
+
+// 删除已经执行完的队列
+func (this *RedisQueue) DeleteReserved(queue string, bs []byte) error {
+	_, err := this.c.Do("zrem", this.getQueueName(queue)+":reserved", string(bs))
+	return err
 }

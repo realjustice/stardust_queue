@@ -13,13 +13,13 @@ func NewDispatcher(manage *Manage) *Dispatcher {
 }
 
 func (this *Dispatcher) DispatchToQueue(job IJob, queueName ...string) error {
-	driver, ok := this.M.Connectors[job.GetOption().Connector]
+	driver, ok := this.M.Connectors.Load(job.GetOption().Connector)
 	if !ok {
 		// if does not set connector,use the default driver
-		driver = this.M.Connectors["Redis"]
+		driver, _ = this.M.Connectors.Load("Redis")
 	}
 
-	return pushCommandToQueue(driver, job, queueName...)
+	return pushCommandToQueue(driver.(IQueue), job, queueName...)
 }
 
 func pushCommandToQueue(queue IQueue, job IJob, queueName ...string) (err error) {

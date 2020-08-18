@@ -2,16 +2,20 @@ package queue
 
 import (
 	"github.com/gomodule/redigo/redis"
-	"stardust_queue/configs"
+	"sync"
 )
 
 type JobID string
 
 type Manage struct {
-	JobList     map[string]IJob
-	Connectors  map[string]IQueue
+	JobList     sync.Map // map[string]IJob
+	Connectors  sync.Map //  map[string]IQueue
 	RedisClient redis.Conn
-	rc          configs.Config
+	rc          Config
+}
+
+type Config struct {
+	RetryAfter int
 }
 
 type manageOptionFunc func(*Manage)
@@ -37,6 +41,12 @@ func AddRedisClient(c redis.Conn) IManageOption {
 	})
 }
 
+func AddRetryAfter(retryAfter int) IManageOption {
+	return manageOptionFunc(func(m *Manage) {
+		m.rc.RetryAfter = retryAfter
+	})
+}
+
 func (this *Manage) clone() *Manage {
 	copy := *this
 	return &copy
@@ -50,7 +60,7 @@ func (this *Manage) RegisterQueues() {
 		case "Null":
 			this.AddConnector("Null", NewNullQueue())
 		case "Redis":
-			this.AddConnector("Redis", NewRedisQueue(this.RedisClient, this.rc.RetryAfter, this.rc.QueueName))
+			this.AddConnector("Redis", NewRedisQueue(this.RedisClient, this.rc.RetryAfter))
 		}
 	}
 }
@@ -65,16 +75,16 @@ func (this *Manage) RegisterWorker(opts ...IWorkOption) *Worker {
 }
 
 func NewManage(opts ...IManageOption) *Manage {
-	m := &Manage{JobList: make(map[string]IJob), Connectors: make(map[string]IQueue)}
+	m := &Manage{}
 
 	return m.WithOptions(opts...)
 }
 
 func (this *Manage) AddConnector(driver string, connector IQueue) {
-	this.Connectors[driver] = connector
+	this.Connectors.Store(driver, connector)
 }
 
 // 绑定key,job
 func (this *Manage) BindJob(key string, job IJob) {
-	this.JobList[key] = job
+	this.JobList.Store(key, job)
 }

@@ -3,6 +3,7 @@ package jobs
 import (
 	"fmt"
 	"stardust_queue/queue"
+	"time"
 )
 
 // 唯一标识
@@ -22,5 +23,7 @@ func NewTestJob(name string) *TestJob {
 
 func (this *TestJob) Execute() queue.IJob {
 	fmt.Printf("my name is: %s", this.Name)
+	time.Sleep(10 * time.Second)
+
 	return this
 }

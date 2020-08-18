@@ -34,3 +34,7 @@ func (this *NullQueue) LaterRaw(payload Payload, delay time.Time, queue ...strin
 func (this *NullQueue) Pop(queue ...string) ([]byte, error) {
 	return nil, nil
 }
+
+func (this *NullQueue) DeleteReserved(queue string, bs []byte) error {
+	return nil
+}

@@ -11,6 +11,7 @@ type IQueue interface {
 	Later(job IJob, delay time.Time, queue ...string) (JobID, error)           // Push a new job onto the queue after a delay.
 	LaterRaw(payload Payload, delay time.Time, queue ...string) (JobID, error) // Push a raw job onto the queue after a delay.
 	Pop(queue ...string) ([]byte, error)                                       // Pop the next job off of the queue.
+	DeleteReserved(queue string, bs []byte) error                              // Delete the reserved job.
 }
 
 type IJob interface {

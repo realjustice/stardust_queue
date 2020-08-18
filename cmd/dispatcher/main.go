@@ -5,6 +5,7 @@ import (
 	"log"
 	"stardust_queue/jobs"
 	"stardust_queue/queue"
+	"time"
 )
 
 func main() {
@@ -18,8 +19,11 @@ func main() {
 	manage.RegisterQueues()
 
 	dispatcher := manage.RegisterDispatcher()
-	job := jobs.NewTestJob("zsc")
-	job.SetDelay(60)
+	for {
+		job := jobs.NewTestJob("zsc")
+		job.SetDelay(10)
 
-	_ = dispatcher.DispatchToQueue(job, "test")
+		_ = dispatcher.DispatchToQueue(job, "test")
+		time.Sleep(5 * time.Second)
+	}
 }
